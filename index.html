@@ -1,0 +1,1580 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Foot Lift｜垂足復原追蹤系統</title>
+<meta name="theme-color" content="#0F6E56">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=DM+Mono&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.10.0/tabler-icons.min.css">
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+:root{
+  --teal:#1D9E75; --tl:#E1F5EE; --td:#0F6E56;
+  --amb:#EF9F27; --amb-l:#FDF0DC;
+  --red:#E24B4A; --red-l:#FBE6E5;
+  --blue:#4E7FD6; --blue-l:#E8EEFA;
+  --bg:#F7F6F2; --bg2:#EFEDE6; --card:#FFFFFF;
+  --text:#20241F; --text2:#5B5F58; --text3:#93958E;
+  --border:rgba(30,40,30,0.10); --radius:16px;
+}
+body{font-family:'Noto Sans TC',sans-serif;background:var(--bg);color:var(--text);line-height:1.6;padding-bottom:76px;}
+.mono{font-family:'DM Mono',monospace;}
+.container{max-width:520px;margin:0 auto;padding:1rem 1rem 2rem;}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit;font-size:15px;}
+input,select,textarea{font-family:inherit;font-size:15px;color:var(--text);}
+a{color:var(--teal);}
+.hidden{display:none!important;}
+
+/* Lock screen */
+.lock-wrap{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2rem;text-align:center;}
+.lock-icon{font-size:38px;color:var(--teal);margin-bottom:14px;}
+.lock-title{font-size:20px;font-weight:700;margin-bottom:6px;}
+.lock-brand{font-family:'DM Mono',monospace;font-size:26px;font-weight:700;letter-spacing:1px;color:var(--teal);margin-bottom:4px;}
+.lock-brand-sub{font-size:11px;color:var(--text3);letter-spacing:3px;margin-bottom:18px;}
+.lock-sub{font-size:13px;color:var(--text3);margin-bottom:24px;line-height:1.8;}
+.lock-input{width:100%;max-width:280px;padding:14px 16px;border-radius:12px;border:1px solid var(--border);background:var(--card);text-align:center;font-size:18px;letter-spacing:4px;margin-bottom:12px;}
+.lock-input:focus{outline:2px solid var(--teal);}
+.btn{padding:12px 24px;border-radius:12px;background:var(--teal);color:#fff;font-weight:500;font-size:15px;}
+.btn:active{transform:scale(0.97);}
+.btn.secondary{background:var(--card);color:var(--text2);border:1px solid var(--border);}
+.btn.block{width:100%;max-width:280px;}
+.lock-err{color:var(--red);font-size:13px;margin-bottom:10px;min-height:18px;}
+.lock-note{font-size:11px;color:var(--text3);margin-top:20px;line-height:1.8;max-width:300px;}
+
+/* Header */
+.topbar{position:sticky;top:0;z-index:20;background:var(--bg);padding:1rem 1rem 0.5rem;max-width:520px;margin:0 auto;display:flex;align-items:center;gap:10px;}
+.topbar .back{width:36px;height:36px;border-radius:10px;background:var(--card);display:flex;align-items:center;justify-content:center;font-size:18px;border:1px solid var(--border);}
+.topbar h1{font-size:18px;font-weight:700;flex:1;}
+.topbar .action{width:36px;height:36px;border-radius:10px;background:var(--card);display:flex;align-items:center;justify-content:center;font-size:16px;border:1px solid var(--border);}
+
+/* Bottom nav */
+.tabbar{position:fixed;bottom:0;left:0;right:0;background:var(--card);border-top:1px solid var(--border);display:flex;z-index:30;padding-bottom:env(safe-area-inset-bottom);}
+.tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:9px 2px 7px;color:var(--text3);font-size:10px;}
+.tab i{font-size:20px;}
+.tab.active{color:var(--teal);}
+
+/* Cards */
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:1.1rem;margin-bottom:0.9rem;}
+.card-title{font-size:13px;color:var(--text3);letter-spacing:0.5px;margin-bottom:10px;display:flex;align-items:center;gap:6px;}
+.stat-row{display:flex;gap:10px;}
+.stat{flex:1;background:var(--tl);border-radius:12px;padding:12px 10px;text-align:center;}
+.stat .num{font-size:24px;font-weight:700;color:var(--td);}
+.stat .lbl{font-size:11px;color:var(--text2);margin-top:2px;}
+.nav-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:1rem;}
+.nav-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px 12px;text-align:center;}
+.nav-card i{font-size:26px;color:var(--teal);margin-bottom:8px;display:block;}
+.nav-card .t{font-size:14px;font-weight:500;}
+.nav-card .s{font-size:11px;color:var(--text3);margin-top:2px;}
+
+.alert-banner{border-radius:12px;padding:12px 14px;margin-bottom:10px;font-size:13px;line-height:1.7;display:flex;gap:10px;align-items:flex-start;}
+.alert-banner.warn{background:var(--amb-l);color:#7a5310;}
+.alert-banner.danger{background:var(--red-l);color:#8a2b2a;}
+.alert-banner i{font-size:18px;margin-top:1px;}
+
+/* Timeline */
+.tl-item{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:10px;}
+.tl-date{font-size:11px;color:var(--text3);font-family:'DM Mono',monospace;}
+.tl-title{font-size:15px;font-weight:600;margin:3px 0 2px;}
+.tl-hosp{font-size:12px;color:var(--teal);margin-bottom:6px;}
+.tl-desc{font-size:13px;color:var(--text2);line-height:1.75;}
+.tl-tag{display:inline-block;font-size:10px;padding:2px 9px;border-radius:20px;background:var(--tl);color:var(--td);margin-bottom:6px;}
+.tl-concl{background:var(--bg2);border-radius:10px;padding:8px 10px;font-size:12px;margin-top:8px;color:var(--text2);}
+.tl-attach{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;}
+.tl-attach a{font-size:11px;padding:4px 10px;border-radius:20px;background:var(--bg2);color:var(--text2);display:inline-flex;align-items:center;gap:4px;text-decoration:none;}
+.tl-edit-row{display:flex;gap:8px;margin-top:8px;}
+.tl-edit-row button{font-size:11px;color:var(--text3);}
+
+/* Forms */
+.form-group{margin-bottom:14px;}
+.form-label{font-size:13px;color:var(--text2);margin-bottom:6px;display:block;}
+.form-input{width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--border);background:var(--bg);}
+.form-input:focus{outline:1px solid var(--teal);}
+textarea.form-input{min-height:70px;resize:vertical;}
+.seg{display:flex;gap:6px;flex-wrap:wrap;}
+.seg-btn{padding:8px 14px;border-radius:20px;border:1px solid var(--border);background:var(--bg);font-size:13px;color:var(--text2);}
+.seg-btn.on{background:var(--teal);color:#fff;border-color:var(--teal);}
+.slider-row{display:flex;align-items:center;gap:10px;}
+.slider-row input[type=range]{flex:1;accent-color:var(--teal);}
+.slider-val{width:32px;text-align:center;font-weight:700;color:var(--td);font-family:'DM Mono',monospace;}
+.chk-row{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--text2);margin-bottom:8px;}
+.file-drop{border:1.5px dashed var(--border);border-radius:12px;padding:16px;text-align:center;font-size:13px;color:var(--text3);}
+.file-drop input{display:none;}
+.file-chip{display:inline-flex;align-items:center;gap:6px;background:var(--bg2);border-radius:20px;padding:4px 10px 4px 4px;font-size:12px;margin:4px 4px 0 0;}
+.file-chip button{color:var(--red);font-size:14px;}
+
+/* history table */
+.hist-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);font-size:13px;}
+.hist-row:last-child{border-bottom:none;}
+.hist-date{color:var(--text3);font-family:'DM Mono',monospace;font-size:12px;}
+.spark{width:100%;height:60px;margin-top:6px;}
+
+/* AI */
+.ai-box{background:var(--tl);border:1px solid rgba(15,110,86,0.18);border-radius:14px;padding:1rem;margin-bottom:1rem;}
+.ai-disclaimer{font-size:11.5px;color:#3d5c52;background:rgba(255,255,255,0.55);border-radius:8px;padding:8px 10px;line-height:1.7;margin-bottom:10px;}
+.ai-response{font-size:13.5px;line-height:2;white-space:pre-wrap;color:var(--text);}
+.ai-thinking{color:var(--text3);font-style:italic;font-size:13px;}
+
+/* Modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(20,25,20,0.45);z-index:100;display:none;align-items:flex-end;justify-content:center;}
+.modal-overlay.show{display:flex;}
+.modal{background:var(--card);border-radius:20px 20px 0 0;padding:1.4rem 1.2rem calc(1.4rem + env(safe-area-inset-bottom));max-width:520px;width:100%;max-height:88vh;overflow-y:auto;}
+.modal-title{font-size:16px;font-weight:700;margin-bottom:14px;}
+.modal-btns{display:flex;gap:8px;margin-top:16px;}
+.modal-btns .btn{flex:1;text-align:center;}
+.api-tab-row{display:flex;gap:8px;margin-bottom:12px;}
+.api-tab{flex:1;text-align:center;padding:8px;border-radius:10px;border:1px solid var(--border);background:var(--bg);font-size:13px;}
+.api-tab.active{background:var(--teal);color:#fff;border-color:var(--teal);}
+.key-status{font-size:10px;padding:2px 8px;border-radius:20px;margin-left:6px;}
+.key-status.ok{background:#dcf3e6;color:#1d7a4c;}
+.key-status.empty{background:var(--bg2);color:var(--text3);}
+
+/* Exercise */
+.ex-hero{text-align:center;padding:1.5rem 0;}
+.ring-wrap{position:relative;width:150px;height:150px;margin:0 auto 14px;}
+.ring-wrap svg{transform:rotate(-90deg);}
+.ring-bg{fill:none;stroke:var(--bg2);stroke-width:9;}
+.ring-fg{fill:none;stroke:var(--teal);stroke-width:9;stroke-linecap:round;transition:stroke-dashoffset 1s linear;}
+.ring-num{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:34px;font-weight:700;font-family:'DM Mono',monospace;color:var(--td);}
+.ex-title{font-size:20px;font-weight:700;}
+.ex-badge{display:inline-block;font-size:11px;padding:3px 12px;border-radius:20px;background:var(--tl);color:var(--td);margin-top:6px;}
+.ex-icon-box{width:100%;aspect-ratio:16/10;background:var(--tl);border-radius:14px;display:flex;align-items:center;justify-content:center;margin-bottom:14px;}
+.ex-icon-box i{font-size:56px;color:var(--td);}
+.ex-inst{font-size:14px;line-height:1.9;color:var(--text2);margin-bottom:14px;}
+.ex-inst strong{color:var(--td);}
+.chip-row{display:flex;gap:8px;margin-bottom:14px;}
+.chip{flex:1;background:var(--bg);border-radius:10px;padding:10px;text-align:center;}
+.chip .l{font-size:10px;color:var(--text3);}
+.chip .v{font-size:15px;font-weight:700;margin-top:2px;}
+.chip-adj{display:flex;justify-content:center;align-items:center;gap:10px;margin-top:4px;}
+.chip-adj button{width:26px;height:26px;border-radius:8px;background:var(--bg2);font-size:15px;}
+.mode-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:1.5rem;text-align:center;margin-bottom:1rem;}
+.mode-card i{font-size:34px;color:var(--teal);margin-bottom:10px;display:block;}
+
+.empty{text-align:center;padding:2.5rem 1rem;color:var(--text3);font-size:13px;line-height:1.9;}
+.empty i{font-size:32px;opacity:0.4;margin-bottom:10px;display:block;}
+footer-note{display:block;text-align:center;font-size:11px;color:var(--text3);margin-top:1.5rem;line-height:1.9;}
+</style>
+</head>
+<body>
+
+<div id="app"></div>
+
+<!-- Modal container -->
+<div id="modalRoot"></div>
+
+<script>
+/* ══════════════════════════════════════════════
+   IndexedDB helper
+══════════════════════════════════════════════ */
+const DB_NAME = 'recoveryTrackerDB';
+const DB_VERSION = 2;
+const STORES = ['timeline','attachments','symptomLogs','gaitLogs','exerciseLogs','kv','caseNotes'];
+let _db = null;
+function openDB(){
+  return new Promise((resolve, reject) => {
+    if (_db) return resolve(_db);
+    const req = indexedDB.open(DB_NAME, DB_VERSION);
+    req.onupgradeneeded = e => {
+      const db = e.target.result;
+      STORES.forEach(s => { if (!db.objectStoreNames.contains(s)) db.createObjectStore(s, { keyPath: 'id' }); });
+    };
+    req.onsuccess = e => { _db = e.target.result; resolve(_db); };
+    req.onerror = e => reject(e);
+  });
+}
+async function dbGetAll(store){
+  const db = await openDB();
+  return new Promise((res, rej) => {
+    const tx = db.transaction(store, 'readonly').objectStore(store).getAll();
+    tx.onsuccess = () => res(tx.result || []);
+    tx.onerror = rej;
+  });
+}
+async function dbGet(store, id){
+  const db = await openDB();
+  return new Promise((res, rej) => {
+    const tx = db.transaction(store, 'readonly').objectStore(store).get(id);
+    tx.onsuccess = () => res(tx.result || null);
+    tx.onerror = rej;
+  });
+}
+async function dbPut(store, obj, opts){
+  const db = await openDB();
+  await new Promise((res, rej) => {
+    const tx = db.transaction(store, 'readwrite').objectStore(store).put(obj);
+    tx.onsuccess = () => res(obj);
+    tx.onerror = rej;
+  });
+  if (!(opts && opts.skipCloud)) cloudPush(store, obj);
+  return obj;
+}
+async function dbDel(store, id, opts){
+  const db = await openDB();
+  await new Promise((res, rej) => {
+    const tx = db.transaction(store, 'readwrite').objectStore(store).delete(id);
+    tx.onsuccess = () => res();
+    tx.onerror = rej;
+  });
+  if (!(opts && opts.skipCloud)) cloudDelete(store, id);
+}
+function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,8); }
+
+/* ══════════════════════════════════════════════
+   Cloud Sync (Firebase — optional, off until 設定 saved + 登入)
+   API Key／密碼雜湊等敏感設定（kv）永遠不會同步到雲端。
+══════════════════════════════════════════════ */
+let fbApp = null, fbAuth = null, fbDb = null, fbStorage = null, fbUser = null;
+const CLOUD_STORES = ['timeline','attachments','symptomLogs','gaitLogs','exerciseLogs','caseNotes'];
+
+function initFirebase(){
+  if (fbApp) return true;
+  const cfg = settings.fbConfig;
+  if (!cfg || typeof firebase === 'undefined') return false;
+  try{
+    fbApp = firebase.apps && firebase.apps.length ? firebase.app() : firebase.initializeApp(cfg);
+    fbAuth = firebase.auth();
+    fbDb = firebase.firestore();
+    fbStorage = firebase.storage();
+    fbAuth.onAuthStateChanged(u => { fbUser = u; if (view === 'settings') render(); });
+    return true;
+  }catch(e){ console.error('Firebase init failed', e); return false; }
+}
+async function fbSignUp(email, pw){
+  if (!initFirebase()) throw new Error('請先儲存 Firebase 設定');
+  await fbAuth.createUserWithEmailAndPassword(email, pw);
+}
+async function fbSignIn(email, pw){
+  if (!initFirebase()) throw new Error('請先儲存 Firebase 設定');
+  await fbAuth.signInWithEmailAndPassword(email, pw);
+}
+async function fbSignOut(){ if (fbAuth) await fbAuth.signOut(); }
+function cloudReady(){ return !!(fbApp && fbAuth && fbAuth.currentUser); }
+
+async function cloudPush(store, obj){
+  if (!CLOUD_STORES.includes(store) || !cloudReady()) return;
+  try{
+    const uidc = fbAuth.currentUser.uid;
+    if (store === 'attachments' && obj.dataUrl && obj.dataUrl.startsWith('data:')){
+      const ref = fbStorage.ref(`users/${uidc}/attachments/${obj.id}`);
+      await ref.putString(obj.dataUrl, 'data_url');
+      const url = await ref.getDownloadURL();
+      await fbDb.collection('users').doc(uidc).collection(store).doc(obj.id).set({ ...obj, dataUrl: url }, { merge:true });
+    } else {
+      await fbDb.collection('users').doc(uidc).collection(store).doc(obj.id).set(obj, { merge:true });
+    }
+  }catch(e){ console.error('cloudPush failed', store, e); }
+}
+async function cloudDelete(store, id){
+  if (!CLOUD_STORES.includes(store) || !cloudReady()) return;
+  try{
+    const uidc = fbAuth.currentUser.uid;
+    await fbDb.collection('users').doc(uidc).collection(store).doc(id).delete();
+    if (store === 'attachments'){ try{ await fbStorage.ref(`users/${uidc}/attachments/${id}`).delete(); }catch(e){} }
+  }catch(e){ console.error('cloudDelete failed', store, e); }
+}
+async function cloudPullAll(){
+  if (!cloudReady()) throw new Error('請先登入雲端帳號');
+  const uidc = fbAuth.currentUser.uid;
+  let count = 0;
+  for (const store of CLOUD_STORES){
+    const snap = await fbDb.collection('users').doc(uidc).collection(store).get();
+    for (const doc of snap.docs){ await dbPut(store, doc.data(), { skipCloud:true }); count++; }
+  }
+  return count;
+}
+async function cloudPushAllLocal(){
+  if (!cloudReady()) throw new Error('請先登入雲端帳號');
+  let count = 0;
+  for (const store of CLOUD_STORES){
+    const rows = await dbGetAll(store);
+    for (const row of rows){ await cloudPush(store, row); count++; }
+  }
+  return count;
+}
+
+/* ══════════════════════════════════════════════
+   Seed data — from user-provided surgical history
+══════════════════════════════════════════════ */
+const SEED_TIMELINE = [
+  { id:'seed1', date:'2023-10-01', type:'surgery', title:'右側腓總神經神經瘤切除手術', hospital:'北港仁一醫院',
+    desc:'手術後立即發生右側垂足（Foot Drop），足背屈功能喪失。術後約第五天再次進行清創手術。', doctorConclusion:'' },
+  { id:'seed2', date:'2023-10-06', type:'surgery', title:'傷口清創手術', hospital:'北港仁一醫院',
+    desc:'因第一次手術後傷口狀況接受清創處理。', doctorConclusion:'' },
+  { id:'seed3', date:'2024-03-01', type:'surgery', title:'神經重建手術（人工神經移植）', hospital:'義大醫院',
+    desc:'針對右側腓總神經損傷進行神經重建，手術費用約新臺幣 50 萬元。', doctorConclusion:'' },
+  { id:'seed4', date:'2024-03-15', type:'surgery', title:'脛後肌肌腱轉位手術（Tendon Transfer）', hospital:'義大醫院',
+    desc:'將脛後肌肌腱轉位至足背，以改善垂足及足背屈功能。', doctorConclusion:'' },
+  { id:'seed5', date:'2025-03-07', type:'surgery', title:'腰椎椎間盤突出切除手術（未做脊椎融合）', hospital:'',
+    desc:'因巨大腰椎椎間盤突出接受間盤切除手術，未施行脊椎融合，目前恢復良好。', doctorConclusion:'' },
+];
+const TL_TYPES = {
+  surgery:{label:'手術', icon:'ti-scissors', color:'var(--red)'},
+  visit:{label:'回診', icon:'ti-stethoscope', color:'var(--blue)'},
+  emg:{label:'EMG／神經傳導', icon:'ti-activity', color:'var(--teal)'},
+  imaging:{label:'影像檢查', icon:'ti-x-ray', color:'var(--amb)'},
+  medication:{label:'用藥', icon:'ti-pill', color:'var(--text2)'},
+};
+
+/* ══════════════════════════════════════════════
+   App State
+══════════════════════════════════════════════ */
+let view = 'loading';
+let viewParams = {};
+let unlocked = false;
+let settings = {};
+
+async function loadSettings(){
+  const rows = await dbGetAll('kv');
+  settings = {};
+  rows.forEach(r => settings[r.id] = r.value);
+}
+async function saveSetting(key, value){
+  settings[key] = value;
+  await dbPut('kv', { id:key, value });
+}
+
+async function ensureSeed(){
+  const existing = await dbGetAll('timeline');
+  if (existing.length === 0){
+    for (const t of SEED_TIMELINE) await dbPut('timeline', t);
+  }
+}
+
+async function sha256(text){
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+}
+
+async function init(){
+  await loadSettings();
+  await ensureSeed();
+  if (settings.fbConfig) initFirebase();
+  if (!settings.pwHash){
+    view = 'setup-password';
+  } else if (localStorage.getItem('rt_unlocked') === '1'){
+    unlocked = true;
+    view = 'home';
+  } else {
+    view = 'lock';
+  }
+  render();
+}
+init();
+
+function goto(v, params){ view = v; viewParams = params || {}; render(); window.scrollTo(0,0); }
+
+/* ══════════════════════════════════════════════
+   Render dispatcher
+══════════════════════════════════════════════ */
+async function render(){
+  const app = document.getElementById('app');
+  if (view === 'loading'){ app.innerHTML = ''; return; }
+  if (view === 'setup-password'){ app.innerHTML = setupPasswordHTML(); return; }
+  if (view === 'lock'){ app.innerHTML = lockHTML(); return; }
+
+  let body = '';
+  if (view === 'home') body = await homeHTML();
+  else if (view === 'timeline') body = await timelineHTML();
+  else if (view === 'timelineForm') body = timelineFormHTML(viewParams.id);
+  else if (view === 'reports') body = await reportsHTML();
+  else if (view === 'caseSummary') body = await caseSummaryHTML();
+  else if (view === 'symptom') body = await symptomHTML();
+  else if (view === 'symptomForm') body = symptomFormHTML();
+  else if (view === 'gait') body = await gaitHTML();
+  else if (view === 'gaitForm') body = gaitFormHTML();
+  else if (view === 'exercise') body = exerciseHomeHTML();
+  else if (view === 'exWarm') body = warmHTML();
+  else if (view === 'exRehab') body = rehabHTML();
+  else if (view === 'ai') body = await aiHTML();
+  else if (view === 'settings') body = await settingsHTML();
+
+  app.innerHTML = `<div class="container">${body}</div>` + tabbarHTML();
+  afterRender();
+}
+
+function tabbarHTML(){
+  const tabs = [
+    {v:'home', icon:'ti-home', label:'首頁'},
+    {v:'timeline', icon:'ti-timeline', label:'病歷'},
+    {v:'symptom', icon:'ti-clipboard-heart', label:'症狀'},
+    {v:'exercise', icon:'ti-run', label:'運動'},
+    {v:'ai', icon:'ti-sparkles', label:'AI摘要'},
+    {v:'settings', icon:'ti-settings', label:'設定'},
+  ];
+  const isEx = ['exercise','exWarm','exRehab'].includes(view);
+  return `<div class="tabbar">${tabs.map(t => `
+    <button class="tab ${ (t.v===view) || (t.v==='exercise'&&isEx) ? 'active':''}" onclick="goto('${t.v}')">
+      <i class="ti ${t.icon}"></i><span>${t.label}</span>
+    </button>`).join('')}</div>`;
+}
+
+function afterRender(){
+  // hook for post-render listeners if needed per-view; most use inline onclick
+}
+
+/* ══════════════════════════════════════════════
+   Lock / Password setup
+══════════════════════════════════════════════ */
+function setupPasswordHTML(){
+  return `<div class="lock-wrap">
+    <div class="lock-brand">Foot Lift</div>
+    <div class="lock-brand-sub">垂　足　復　原　追　蹤</div>
+    <div class="lock-icon"><i class="ti ti-shield-lock"></i></div>
+    <div class="lock-title">設定存取密碼</div>
+    <div class="lock-sub">這裡會保存您的病歷與健康資料，<br>請設定一組密碼保護本機存取。</div>
+    <input type="password" id="pwSetup1" class="lock-input" placeholder="設定密碼" autocomplete="off" onkeydown="if(event.key==='Enter')doSetupPassword()">
+    <div class="lock-err" id="pwSetupErr"></div>
+    <button class="btn block" onclick="doSetupPassword()">設定並進入</button>
+    <p class="lock-note">
+      ⚠️ 這是「前端密碼鎖」，可防止隨手被看到，但無法阻擋懂技術的人查看網頁原始碼。
+      若要正式保護病歷資料，部署時請另外啟用主機端的密碼保護（例如 Netlify Password Protection），不要只依賴這層鎖。
+    </p>
+  </div>`;
+}
+async function doSetupPassword(){
+  const p1 = document.getElementById('pwSetup1').value;
+  const err = document.getElementById('pwSetupErr');
+  if (p1.length < 4){ err.textContent = '密碼至少 4 碼'; return; }
+  const hash = await sha256(p1);
+  await saveSetting('pwHash', hash);
+  localStorage.setItem('rt_unlocked','1');
+  unlocked = true;
+  goto('home');
+}
+
+function lockHTML(){
+  return `<div class="lock-wrap">
+    <div class="lock-brand">Foot Lift</div>
+    <div class="lock-brand-sub">垂　足　復　原　追　蹤</div>
+    <div class="lock-icon"><i class="ti ti-lock"></i></div>
+    <div class="lock-title">垂足復原追蹤系統</div>
+    <div class="lock-sub">請輸入密碼以檢視您的健康紀錄</div>
+    <input type="password" id="pwInput" class="lock-input" placeholder="密碼" autocomplete="off" onkeydown="if(event.key==='Enter')doUnlock()">
+    <div class="lock-err" id="pwErr"></div>
+    <button class="btn block" onclick="doUnlock()">解鎖</button>
+  </div>`;
+}
+async function doUnlock(){
+  const p = document.getElementById('pwInput').value;
+  const hash = await sha256(p);
+  if (hash === settings.pwHash){
+    localStorage.setItem('rt_unlocked','1');
+    unlocked = true;
+    goto('home');
+  } else {
+    document.getElementById('pwErr').textContent = '密碼錯誤，請再試一次';
+  }
+}
+function lockApp(){
+  localStorage.removeItem('rt_unlocked');
+  unlocked = false;
+  goto('lock');
+}
+
+/* ══════════════════════════════════════════════
+   Home Dashboard
+══════════════════════════════════════════════ */
+function daysSince(dateStr){
+  const d1 = new Date(dateStr); const d2 = new Date();
+  return Math.floor((d2 - d1) / 86400000);
+}
+async function computeAlerts(){
+  const alerts = [];
+  const symptomLogs = (await dbGetAll('symptomLogs')).sort((a,b)=>b.date.localeCompare(a.date));
+
+  if (symptomLogs.length >= 6){
+    const recent3 = symptomLogs.slice(0,3).reduce((s,l)=>s+(l.dorsiStrength||0),0)/3;
+    const prev3 = symptomLogs.slice(3,6).reduce((s,l)=>s+(l.dorsiStrength||0),0)/3;
+    if (recent3 < prev3 - 0.8){
+      alerts.push({level:'warn', icon:'ti-trending-down', text:'背屈肌力自評分數近期呈現下降趨勢，建議在下次回診時特別提出討論。'});
+    }
+  }
+  return alerts;
+}
+async function homeHTML(){
+  const timeline = (await dbGetAll('timeline')).sort((a,b)=>a.date.localeCompare(b.date));
+  const nerveSurgery = timeline.find(t => t.title.includes('神經重建'));
+  const tendonSurgery = timeline.find(t => t.title.includes('肌腱轉位'));
+  const discSurgery = timeline.find(t => t.title.includes('椎間盤'));
+  const alerts = await computeAlerts();
+  const exLogs = await dbGetAll('exerciseLogs');
+  const today = new Date().toISOString().slice(0,10);
+  const doneToday = exLogs.filter(l => l.date === today).length;
+
+  return `
+    <div style="text-align:center;margin:0.5rem 0 1.2rem;position:relative;">
+      <button onclick="openInfoModal()" style="position:absolute;top:0;right:0;width:32px;height:32px;border-radius:50%;background:var(--card);border:1px solid var(--border);color:var(--text2);display:flex;align-items:center;justify-content:center;"><i class="ti ti-info-circle"></i></button>
+      <div style="font-family:'DM Mono',monospace;font-size:15px;font-weight:700;color:var(--teal);letter-spacing:1px;">Foot Lift</div>
+      <div style="font-size:12px;color:var(--text3);letter-spacing:2px;margin-top:2px;">垂　足　復　原　追　蹤</div>
+      <div style="font-size:22px;font-weight:700;margin-top:4px;">今天也要好好記錄一下</div>
+    </div>
+    ${alerts.map(a => `<div class="alert-banner ${a.level}"><i class="ti ${a.icon}"></i><div>${a.text}</div></div>`).join('')}
+    <div class="card">
+      <div class="card-title"><i class="ti ti-calendar-stats"></i>復原天數</div>
+      <div class="stat-row">
+        ${tendonSurgery ? `<div class="stat"><div class="num">${daysSince(tendonSurgery.date)}</div><div class="lbl">天・肌腱轉位術後</div></div>` : ''}
+        ${discSurgery ? `<div class="stat"><div class="num">${daysSince(discSurgery.date)}</div><div class="lbl">天・腰椎術後</div></div>` : ''}
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title"><i class="ti ti-flame"></i>今日復健運動</div>
+      <p style="font-size:13px;color:var(--text2);">今天已完成 <strong style="color:var(--td)">${doneToday}</strong> 項運動</p>
+      <button class="btn" style="margin-top:10px;width:100%;" onclick="goto('exercise')">前往運動 →</button>
+    </div>
+    <div class="nav-grid">
+      <button class="nav-card" onclick="goto('timeline')"><i class="ti ti-timeline"></i><div class="t">病歷時間軸</div><div class="s">手術／回診／EMG</div></button>
+      <button class="nav-card" onclick="goto('reports')"><i class="ti ti-file-report"></i><div class="t">檢查報告</div><div class="s">上傳 EMG／影像／報告</div></button>
+      <button class="nav-card" onclick="goto('symptom')"><i class="ti ti-clipboard-heart"></i><div class="t">症狀日誌</div><div class="s">肌力／麻木／疼痛</div></button>
+      <button class="nav-card" onclick="goto('gait')"><i class="ti ti-walk"></i><div class="t">功能與步態</div><div class="s">走路／跌倒／輔具</div></button>
+      <button class="nav-card" onclick="goto('ai')"><i class="ti ti-sparkles"></i><div class="t">AI 摘要</div><div class="s">趨勢整理／回診簡報</div></button>
+      <button class="nav-card" onclick="goto('caseSummary')"><i class="ti ti-notes"></i><div class="t">病例簡述</div><div class="s">持續記錄病史與近況</div></button>
+    </div>
+    <p style="text-align:center;font-size:11px;color:var(--text3);margin-top:1.5rem;line-height:1.9;">
+      本系統僅協助您整理紀錄，不能取代醫師診斷。<br>如有症狀急遽惡化，請立即回診或就醫。
+    </p>
+  `;
+}
+
+/* ══════════════════════════════════════════════
+   Medical Timeline
+══════════════════════════════════════════════ */
+async function timelineHTML(){
+  const items = (await dbGetAll('timeline')).sort((a,b)=>b.date.localeCompare(a.date));
+  const attachments = await dbGetAll('attachments');
+  const attByTl = {};
+  attachments.forEach(a => { (attByTl[a.timelineId] = attByTl[a.timelineId]||[]).push(a); });
+
+  return `
+    <div class="topbar" style="padding-left:0;padding-right:0;">
+      <h1>病歷時間軸</h1>
+      <button class="action" onclick="goto('timelineForm')"><i class="ti ti-plus"></i></button>
+    </div>
+    ${items.length === 0 ? emptyHTML('ti-timeline','還沒有任何紀錄') : items.map(it => {
+      const type = TL_TYPES[it.type] || TL_TYPES.visit;
+      const atts = attByTl[it.id] || [];
+      return `<div class="tl-item">
+        <span class="tl-tag" style="color:${type.color}"><i class="ti ${type.icon}"></i> ${type.label}</span>
+        <div class="tl-date">${it.date}</div>
+        <div class="tl-title">${escapeHtml(it.title)}</div>
+        ${it.hospital ? `<div class="tl-hosp">${escapeHtml(it.hospital)}</div>` : ''}
+        <div class="tl-desc">${escapeHtml(it.desc||'')}</div>
+        ${it.historyDesc ? `<div class="tl-concl"><strong>病史描述：</strong>${escapeHtml(it.historyDesc)}</div>` : ''}
+        ${it.doctorConclusion ? `<div class="tl-concl"><strong>醫師結論／報告摘要：</strong>${escapeHtml(it.doctorConclusion)}</div>` : ''}
+        ${atts.length ? `<div class="tl-attach">${atts.map(a=>`<a href="${a.dataUrl}" download="${escapeHtml(a.name)}"><i class="ti ti-paperclip"></i>${escapeHtml(a.name)}</a>`).join('')}</div>` : ''}
+        <div class="tl-edit-row">
+          <button onclick="goto('timelineForm',{id:'${it.id}'})"><i class="ti ti-edit"></i> 編輯</button>
+          <button onclick="deleteTimelineItem('${it.id}')"><i class="ti ti-trash"></i> 刪除</button>
+        </div>
+      </div>`;
+    }).join('')}
+  `;
+}
+function timelineFormHTML(id){
+  const editing = !!id;
+  return `
+    <div class="topbar" style="padding-left:0;padding-right:0;">
+      <button class="back" onclick="goto('timeline')"><i class="ti ti-arrow-left"></i></button>
+      <h1>${editing?'編輯':'新增'}病歷事件</h1>
+    </div>
+    <div id="tlFormBody"><div class="empty">載入中…</div></div>
+  `;
+}
+async function renderTimelineForm(id){
+  const it = id ? await dbGet('timeline', id) : { id:uid(), date:new Date().toISOString().slice(0,10), type:'visit', title:'', hospital:'', desc:'', historyDesc:'', doctorConclusion:'' };
+  const atts = id ? (await dbGetAll('attachments')).filter(a=>a.timelineId===id) : [];
+  const box = document.getElementById('tlFormBody');
+  if (!box) return;
+  box.innerHTML = `
+    <div class="form-group">
+      <label class="form-label">類型</label>
+      <div class="seg" id="tlTypeSeg">
+        ${Object.entries(TL_TYPES).map(([k,v])=>`<button type="button" class="seg-btn ${it.type===k?'on':''}" data-val="${k}" onclick="segPick('tlTypeSeg',this)"><i class="ti ${v.icon}"></i> ${v.label}</button>`).join('')}
+      </div>
+    </div>
+    <div class="form-group"><label class="form-label">日期</label><input class="form-input" type="date" id="tlDate" value="${it.date}"></div>
+    <div class="form-group"><label class="form-label">標題</label><input class="form-input" id="tlTitle" placeholder="例：右腓總神經神經瘤切除手術" value="${escapeAttr(it.title)}"></div>
+    <div class="form-group"><label class="form-label">醫院／診所</label><input class="form-input" id="tlHospital" placeholder="例：義大醫院" value="${escapeAttr(it.hospital)}"></div>
+    <div class="form-group"><label class="form-label">說明</label><textarea class="form-input" id="tlDesc" placeholder="手術／回診經過…">${escapeHtml(it.desc)}</textarea></div>
+    <div class="form-group">
+      <label class="form-label">病史描述（可將過去相關症狀一併描述，會納入 AI 判斷參考）</label>
+      <textarea class="form-input" id="tlHistoryDesc" placeholder="描述與此事件相關的過去症狀變化、病史背景…" style="min-height:90px;">${escapeHtml(it.historyDesc||'')}</textarea>
+    </div>
+    <div class="form-group">
+      <label class="form-label">醫師結論／報告重點（選填，例如 EMG 報告結論）</label>
+      <textarea class="form-input" id="tlConcl" placeholder="逐字或摘要記下醫師在報告上寫的結論，AI 產生摘要時會直接引用這段文字">${escapeHtml(it.doctorConclusion)}</textarea>
+    </div>
+    <div class="form-group">
+      <label class="form-label">附件（EMG／影像／病歷掃描，可多選）</label>
+      <div class="file-drop" onclick="document.getElementById('tlFile').click()">
+        <i class="ti ti-cloud-upload" style="font-size:22px;"></i><br>點擊上傳檔案
+        <input type="file" id="tlFile" multiple accept="image/*,.pdf" onchange="handleTlFiles(event)">
+      </div>
+      <div id="tlFileChips">${atts.map(a=>`<span class="file-chip" data-att="${a.id}"><i class="ti ti-paperclip"></i>${escapeHtml(a.name)}<button onclick="removeAttChip('${a.id}')">✕</button></span>`).join('')}</div>
+    </div>
+    <div class="modal-btns">
+      <button class="btn secondary" onclick="goto('timeline')">取消</button>
+      <button class="btn" onclick="saveTimelineItem('${it.id}')">儲存</button>
+    </div>
+  `;
+  box.dataset.newFiles = '[]';
+}
+function segPick(containerId, el){
+  document.getElementById(containerId).querySelectorAll('.seg-btn').forEach(b=>b.classList.remove('on'));
+  el.classList.add('on');
+}
+let _pendingFiles = [];
+function handleTlFiles(e){
+  const files = Array.from(e.target.files);
+  let remaining = files.length;
+  files.forEach(f => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      _pendingFiles.push({ id: uid(), name: f.name, dataUrl: reader.result });
+      const chipHtml = `<span class="file-chip" data-pending="${_pendingFiles[_pendingFiles.length-1].id}"><i class="ti ti-paperclip"></i>${escapeHtml(f.name)}<button onclick="this.parentElement.remove()">✕</button></span>`;
+      document.getElementById('tlFileChips').insertAdjacentHTML('beforeend', chipHtml);
+    };
+    reader.readAsDataURL(f);
+  });
+}
+async function removeAttChip(attId){
+  await dbDel('attachments', attId);
+  document.querySelector(`[data-att="${attId}"]`)?.remove();
+}
+async function saveTimelineItem(id){
+  const type = document.querySelector('#tlTypeSeg .seg-btn.on')?.dataset.val || 'visit';
+  const item = {
+    id, date: document.getElementById('tlDate').value,
+    type, title: document.getElementById('tlTitle').value.trim(),
+    hospital: document.getElementById('tlHospital').value.trim(),
+    desc: document.getElementById('tlDesc').value.trim(),
+    historyDesc: document.getElementById('tlHistoryDesc').value.trim(),
+    doctorConclusion: document.getElementById('tlConcl').value.trim(),
+  };
+  if (!item.title){ alert('請輸入標題'); return; }
+  await dbPut('timeline', item);
+  for (const f of _pendingFiles){
+    await dbPut('attachments', { id:f.id, timelineId:id, name:f.name, dataUrl:f.dataUrl });
+  }
+  _pendingFiles = [];
+  goto('timeline');
+}
+async function deleteTimelineItem(id){
+  if (!confirm('確定刪除這筆病歷事件？相關附件也會一併刪除。')) return;
+  await dbDel('timeline', id);
+  const atts = (await dbGetAll('attachments')).filter(a=>a.timelineId===id);
+  for (const a of atts) await dbDel('attachments', a.id);
+  goto('timeline');
+}
+
+/* ══════════════════════════════════════════════
+   Reports — dedicated exam-report upload & library
+══════════════════════════════════════════════ */
+async function reportsHTML(){
+  _qrPendingFiles = [];
+  const attachments = await dbGetAll('attachments');
+  const timeline = await dbGetAll('timeline');
+  const tlById = {}; timeline.forEach(t => tlById[t.id] = t);
+  const rows = attachments.map(a => ({ ...a, tl: tlById[a.timelineId] }))
+    .filter(a => a.tl)
+    .sort((a,b) => b.tl.date.localeCompare(a.tl.date));
+  const groups = {};
+  rows.forEach(a => { const k = a.tl.type || 'other'; (groups[k]=groups[k]||[]).push(a); });
+
+  return `
+    <div class="topbar" style="padding-left:0;padding-right:0;">
+      <h1>檢查報告</h1>
+    </div>
+    <div class="card">
+      <div class="form-group">
+        <label class="form-label">報告類型</label>
+        <div class="seg" id="qrTypeSeg">
+          <button type="button" class="seg-btn on" data-val="emg" onclick="segPick('qrTypeSeg',this)">EMG／神經傳導</button>
+          <button type="button" class="seg-btn" data-val="imaging" onclick="segPick('qrTypeSeg',this)">影像檢查</button>
+          <button type="button" class="seg-btn" data-val="visit" onclick="segPick('qrTypeSeg',this)">回診紀錄</button>
+          <button type="button" class="seg-btn" data-val="medication" onclick="segPick('qrTypeSeg',this)">用藥</button>
+        </div>
+      </div>
+      <div class="form-group"><label class="form-label">日期</label><input class="form-input" type="date" id="qrDate" value="${new Date().toISOString().slice(0,10)}"></div>
+      <div class="form-group"><label class="form-label">標題（選填）</label><input class="form-input" id="qrTitle" placeholder="例：術後三個月 EMG 追蹤"></div>
+      <div class="form-group">
+        <label class="form-label">選擇檔案（可多選，圖片或 PDF）</label>
+        <div class="file-drop" onclick="document.getElementById('qrFile').click()">
+          <i class="ti ti-cloud-upload" style="font-size:22px;"></i><br>點擊選擇檔案
+          <input type="file" id="qrFile" multiple accept="image/*,.pdf" onchange="handleQrFiles(event)">
+        </div>
+        <div id="qrFileChips"></div>
+      </div>
+      <button class="btn" style="width:100%;" onclick="saveQuickReport()">上傳並儲存</button>
+    </div>
+    <p style="font-size:12px;color:var(--text3);margin-bottom:12px;line-height:1.8;">
+      這裡集中管理 EMG、影像、抽血、病歷掃描等各項報告檔案。上傳後也會出現在「病歷時間軸」對應日期上。
+    </p>
+    ${rows.length === 0 ? emptyHTML('ti-file-report','還沒有上傳任何報告，於上方新增') :
+      Object.entries(groups).map(([type, items]) => {
+        const t = TL_TYPES[type] || TL_TYPES.visit;
+        return `<div class="card">
+          <div class="card-title"><i class="ti ${t.icon}"></i>${t.label}</div>
+          ${items.map(a => `<div class="hist-row">
+            <span class="hist-date">${a.tl.date}</span>
+            <a href="${a.dataUrl}" download="${escapeAttr(a.name)}" style="font-size:13px;flex:1;margin:0 8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"><i class="ti ti-paperclip"></i> ${escapeHtml(a.name)}</a>
+            <button onclick="removeReportAttachment('${a.id}')"><i class="ti ti-trash" style="color:var(--text3);"></i></button>
+          </div>`).join('')}
+        </div>`;
+      }).join('')
+    }
+  `;
+}
+function openQuickReportModal(){
+  const root = document.getElementById('modalRoot');
+  root.innerHTML = `
+    <div class="modal-overlay show" id="qrOverlay" onclick="if(event.target===this)closeQuickReportModal()">
+      <div class="modal">
+        <div class="modal-title">快速上傳報告</div>
+        <div class="form-group">
+          <label class="form-label">報告類型</label>
+          <div class="seg" id="qrTypeSeg">
+            <button type="button" class="seg-btn on" data-val="emg">EMG／神經傳導</button>
+            <button type="button" class="seg-btn" data-val="imaging">影像檢查</button>
+            <button type="button" class="seg-btn" data-val="visit">回診紀錄</button>
+            <button type="button" class="seg-btn" data-val="medication">用藥</button>
+          </div>
+        </div>
+        <div class="form-group"><label class="form-label">日期</label><input class="form-input" type="date" id="qrDate" value="${new Date().toISOString().slice(0,10)}"></div>
+        <div class="form-group"><label class="form-label">標題（選填）</label><input class="form-input" id="qrTitle" placeholder="例：術後三個月 EMG 追蹤"></div>
+        <div class="form-group">
+          <label class="form-label">選擇檔案（可多選，圖片或 PDF）</label>
+          <div class="file-drop" onclick="document.getElementById('qrFile').click()">
+            <i class="ti ti-cloud-upload" style="font-size:22px;"></i><br>點擊選擇檔案
+            <input type="file" id="qrFile" multiple accept="image/*,.pdf" onchange="handleQrFiles(event)">
+          </div>
+          <div id="qrFileChips"></div>
+        </div>
+        <div class="modal-btns">
+          <button class="btn secondary" onclick="closeQuickReportModal()">取消</button>
+          <button class="btn" onclick="saveQuickReport()">上傳並儲存</button>
+        </div>
+      </div>
+    </div>`;
+  document.querySelectorAll('#qrTypeSeg .seg-btn').forEach(b => b.onclick = () => segPick('qrTypeSeg', b));
+  _qrPendingFiles = [];
+}
+function closeQuickReportModal(){ document.getElementById('modalRoot').innerHTML = ''; }
+function openInfoModal(){
+  const root = document.getElementById('modalRoot');
+  root.innerHTML = `
+    <div class="modal-overlay show" id="infoOverlay" onclick="if(event.target===this)closeInfoModal()">
+      <div class="modal" style="text-align:left;max-height:80vh;overflow-y:auto;">
+        <div class="modal-title">說明</div>
+        <div style="font-size:13px;color:var(--text2);line-height:1.9;">
+          <p><strong>這是什麼？</strong><br>
+          Foot Lift 是給您自己使用的垂足（foot drop）復原追蹤工具，用來記錄病歷時間軸、檢查報告、症狀日誌、步態與復健運動，並可請 AI 幫忙整理趨勢、產出回診簡報。</p>
+          <p><strong>各項功能</strong><br>
+          ・病歷時間軸：記錄手術、回診、EMG 等事件，可附加病史描述<br>
+          ・檢查報告：上傳 EMG／影像／報告檔案<br>
+          ・症狀日誌：依時間記錄足底筋膜區域（前／中／後足弓）等症狀<br>
+          ・功能與步態：記錄走路狀況與輔具使用（文字描述）<br>
+          ・病例簡述：持續累加病史與近況，供 AI 綜合判斷使用<br>
+          ・AI 摘要：整理趨勢、產出回診簡報、步態衛教建議（僅供參考，不取代醫師診斷）</p>
+          <p><strong>密碼</strong><br>
+          首次使用需設定一組本機密碼，之後同一裝置／瀏覽器只需輸入一次即可，除非您在「設定」中手動「立即鎖定」。這是前端密碼鎖，可防隨手被看到，但不是正式的資安防護。</p>
+          <p><strong>資料儲存</strong><br>
+          所有資料預設儲存在您瀏覽器本機（IndexedDB），清除瀏覽器資料會遺失，請至「設定」定期匯出備份。若在「設定」中設定 Firebase，資料會另外同步一份到您自己的雲端專案，可跨裝置存取；API Key 與密碼永遠不會上傳。</p>
+          <p><strong>免責聲明</strong><br>
+          本系統僅協助您整理紀錄與衛教資訊，AI 產出的內容不構成醫療診斷或治療建議，如有症狀急遽惡化，請立即回診或就醫。</p>
+        </div>
+        <div class="modal-btns">
+          <button class="btn block" onclick="closeInfoModal()">關閉</button>
+        </div>
+      </div>
+    </div>`;
+}
+function closeInfoModal(){ document.getElementById('modalRoot').innerHTML = ''; }
+let _qrPendingFiles = [];
+function handleQrFiles(e){
+  const files = Array.from(e.target.files);
+  files.forEach(f => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const rec = { id: uid(), name: f.name, dataUrl: reader.result };
+      _qrPendingFiles.push(rec);
+      document.getElementById('qrFileChips').insertAdjacentHTML('beforeend',
+        `<span class="file-chip" data-pending="${rec.id}"><i class="ti ti-paperclip"></i>${escapeHtml(f.name)}<button onclick="this.parentElement.remove();_qrPendingFiles=_qrPendingFiles.filter(x=>x.id!=='${rec.id}')">✕</button></span>`);
+    };
+    reader.readAsDataURL(f);
+  });
+}
+async function saveQuickReport(){
+  if (_qrPendingFiles.length === 0){ alert('請至少選擇一個檔案'); return; }
+  const type = document.querySelector('#qrTypeSeg .seg-btn.on')?.dataset.val || 'emg';
+  const date = document.getElementById('qrDate').value;
+  const title = document.getElementById('qrTitle').value.trim() || (TL_TYPES[type]?.label || '檢查報告');
+  const tlId = uid();
+  await dbPut('timeline', { id: tlId, date, type, title, hospital:'', desc:'', historyDesc:'', doctorConclusion:'' });
+  for (const f of _qrPendingFiles){
+    await dbPut('attachments', { id: f.id, timelineId: tlId, name: f.name, dataUrl: f.dataUrl });
+  }
+  _qrPendingFiles = [];
+  goto('reports');
+}
+async function removeReportAttachment(attId){
+  if (!confirm('確定刪除這個檔案？')) return;
+  await dbDel('attachments', attId);
+  goto('reports');
+}
+
+/* ══════════════════════════════════════════════
+   Case Summary — 病例簡述（可持續輸入的病史／近況記錄）
+══════════════════════════════════════════════ */
+async function caseSummaryHTML(){
+  const notes = (await dbGetAll('caseNotes')).sort((a,b)=> b.date.localeCompare(a.date) || b.id.localeCompare(a.id));
+  return `
+    <div class="topbar" style="padding-left:0;padding-right:0;">
+      <h1>病例簡述</h1>
+    </div>
+    <p style="font-size:12px;color:var(--text3);margin-bottom:12px;line-height:1.8;">
+      在這裡持續記錄病史背景、目前整體狀況、醫師交代的重點等。這些內容會被納入 AI 摘要的參考資料，幫助產生更完整的回診摘要與趨勢整理。
+    </p>
+    <div class="card">
+      <div class="form-group"><label class="form-label">日期</label><input class="form-input" type="date" id="csDate" value="${new Date().toISOString().slice(0,10)}"></div>
+      <div class="form-group"><label class="form-label">內容</label><textarea class="form-input" id="csText" placeholder="例如：目前整體病史背景、近期狀況變化、醫師交代事項…" style="min-height:110px;"></textarea></div>
+      <button class="btn" style="width:100%;" onclick="saveCaseNote()">新增紀錄</button>
+    </div>
+    ${notes.length === 0 ? emptyHTML('ti-notes','還沒有病例簡述紀錄') : notes.map(n => `
+      <div class="tl-item">
+        <div class="tl-date">${n.date}</div>
+        <div class="tl-desc" style="white-space:pre-wrap;">${escapeHtml(n.text)}</div>
+        <div class="tl-edit-row"><button onclick="deleteCaseNote('${n.id}')"><i class="ti ti-trash"></i> 刪除</button></div>
+      </div>`).join('')}
+  `;
+}
+async function saveCaseNote(){
+  const date = document.getElementById('csDate').value;
+  const text = document.getElementById('csText').value.trim();
+  if (!text){ alert('請輸入內容'); return; }
+  await dbPut('caseNotes', { id: uid(), date, text });
+  goto('caseSummary');
+}
+async function deleteCaseNote(id){
+  if (!confirm('確定刪除這筆病例簡述？')) return;
+  await dbDel('caseNotes', id);
+  goto('caseSummary');
+}
+
+/* ══════════════════════════════════════════════
+   Symptom Log
+══════════════════════════════════════════════ */
+const DORSI_LABELS = ['0：完全無法上抬','1：可見微弱收縮','2：可上抬但無法對抗重力','3：可對抗重力','4：可對抗中度阻力','5：正常肌力'];
+const FASCIA_ZONES = [{k:'front',l:'前足弓'},{k:'middle',l:'中足弓'},{k:'back',l:'後足弓'}];
+function fasciaSegHTML(selected){
+  selected = selected || [];
+  return FASCIA_ZONES.map(z => `<button type="button" class="seg-btn ${selected.includes(z.k)?'on':''}" data-val="${z.k}" onclick="this.classList.toggle('on')">${z.l}</button>`).join('');
+}
+async function symptomHTML(){
+  const logs = (await dbGetAll('symptomLogs')).sort((a,b)=> b.date.localeCompare(a.date) || (b.time||'').localeCompare(a.time||''));
+  const now = new Date();
+  const newId = uid();
+  return `
+    <div class="topbar" style="padding-left:0;padding-right:0;">
+      <h1>症狀日誌</h1>
+    </div>
+    <div class="card">
+      <div class="form-group" style="display:flex;gap:10px;">
+        <div style="flex:1;"><label class="form-label">日期</label><input class="form-input" type="date" id="symDate" value="${now.toISOString().slice(0,10)}"></div>
+        <div style="flex:1;"><label class="form-label">時間</label><input class="form-input" type="time" id="symTime" value="${now.toTimeString().slice(0,5)}"></div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">足背屈肌力自評</label>
+        <div class="slider-row"><input type="range" min="0" max="5" step="1" id="symDorsi" value="3" oninput="document.getElementById('symDorsiLbl').textContent=DORSI_LABELS[this.value];this.nextElementSibling.textContent=this.value"><span class="slider-val">3</span></div>
+        <div id="symDorsiLbl" style="font-size:12px;color:var(--text3);margin-top:4px;">${DORSI_LABELS[3]}</div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">麻木／異常感覺範圍</label>
+        <input class="form-input" id="symNumbArea" placeholder="例：足背外側、小腿外側…">
+        <div class="slider-row" style="margin-top:8px;"><span style="font-size:12px;color:var(--text3);">嚴重度</span><input type="range" min="0" max="10" id="symNumbSev" value="0" oninput="this.nextElementSibling.textContent=this.value"><span class="slider-val">0</span></div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">足底筋膜（足弓部位，可複選）</label>
+        <div class="seg" id="symFasciaSeg">${fasciaSegHTML([])}</div>
+      </div>
+      <div class="form-group"><label class="form-label">備註</label><textarea class="form-input" id="symNote" placeholder="今天的狀況、有沒有特別事件…"></textarea></div>
+      <button class="btn" style="width:100%;" onclick="saveSymptomLog('${newId}')">新增紀錄</button>
+    </div>
+    ${logs.length >= 2 ? `<div class="card"><div class="card-title"><i class="ti ti-chart-line"></i>趨勢（背屈肌力）</div>${sparklineHTML(logs)}</div>` : ''}
+    <div class="card">
+      <div class="card-title"><i class="ti ti-list"></i>歷史紀錄</div>
+      ${logs.length===0 ? emptyHTML('ti-clipboard-heart','還沒有症狀紀錄，於上方新增') : logs.map(l=>`
+        <div class="hist-row">
+          <span class="hist-date">${l.date}${l.time?' '+l.time:''}</span>
+          <span>肌力 ${l.dorsiStrength}／5</span>
+          <span>${(l.plantarFascia&&l.plantarFascia.length) ? l.plantarFascia.map(k=>(FASCIA_ZONES.find(z=>z.k===k)||{}).l||k).join('、') : '足底無異常'}</span>
+          <button onclick="goto('symptomForm',{id:'${l.id}'})"><i class="ti ti-edit" style="color:var(--text3);"></i></button>
+        </div>`).join('')}
+    </div>
+  `;
+}
+function sparklineHTML(logs){
+  const sorted = [...logs].sort((a,b)=>a.date.localeCompare(b.date)).slice(-20);
+  const w = 460, h = 60, pad = 4;
+  const step = (w - pad*2) / Math.max(sorted.length-1,1);
+  const pt = (arr,key,max) => arr.map((l,i)=>`${pad+i*step},${h-pad-((l[key]||0)/max)*(h-pad*2)}`).join(' ');
+  return `<svg class="spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">
+    <polyline points="${pt(sorted,'dorsiStrength',5)}" fill="none" stroke="var(--teal)" stroke-width="2"/>
+  </svg>
+  <div style="display:flex;gap:14px;font-size:11px;color:var(--text3);margin-top:4px;">
+    <span><span style="color:var(--teal);">━</span> 背屈肌力</span>
+  </div>`;
+}
+function symptomFormHTML(){
+  return `
+    <div class="topbar" style="padding-left:0;padding-right:0;">
+      <button class="back" onclick="goto('symptom')"><i class="ti ti-arrow-left"></i></button>
+      <h1>症狀紀錄</h1>
+    </div>
+    <div id="symFormBody"><div class="empty">載入中…</div></div>
+  `;
+}
+async function renderSymptomForm(id){
+  const now = new Date();
+  const l = id ? await dbGet('symptomLogs', id) : { id:uid(), date:now.toISOString().slice(0,10), time:now.toTimeString().slice(0,5), dorsiStrength:3, numbnessArea:'', numbnessSeverity:0, plantarFascia:[], note:'' };
+  const box = document.getElementById('symFormBody');
+  if (!box) return;
+  box.innerHTML = `
+    <div class="form-group" style="display:flex;gap:10px;">
+      <div style="flex:1;"><label class="form-label">日期</label><input class="form-input" type="date" id="symDate" value="${l.date}"></div>
+      <div style="flex:1;"><label class="form-label">時間</label><input class="form-input" type="time" id="symTime" value="${l.time || now.toTimeString().slice(0,5)}"></div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">足背屈肌力自評</label>
+      <div class="slider-row"><input type="range" min="0" max="5" step="1" id="symDorsi" value="${l.dorsiStrength}" oninput="document.getElementById('symDorsiLbl').textContent=DORSI_LABELS[this.value];this.nextElementSibling.textContent=this.value"><span class="slider-val">${l.dorsiStrength}</span></div>
+      <div id="symDorsiLbl" style="font-size:12px;color:var(--text3);margin-top:4px;">${DORSI_LABELS[l.dorsiStrength]}</div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">麻木／異常感覺範圍</label>
+      <input class="form-input" id="symNumbArea" placeholder="例：足背外側、小腿外側…" value="${escapeAttr(l.numbnessArea)}">
+      <div class="slider-row" style="margin-top:8px;"><span style="font-size:12px;color:var(--text3);">嚴重度</span><input type="range" min="0" max="10" id="symNumbSev" value="${l.numbnessSeverity}" oninput="this.nextElementSibling.textContent=this.value"><span class="slider-val">${l.numbnessSeverity}</span></div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">足底筋膜（足弓部位，可複選）</label>
+      <div class="seg" id="symFasciaSeg">${fasciaSegHTML(l.plantarFascia)}</div>
+    </div>
+    <div class="form-group"><label class="form-label">備註</label><textarea class="form-input" id="symNote" placeholder="今天的狀況、有沒有特別事件…">${escapeHtml(l.note)}</textarea></div>
+    <div class="modal-btns">
+      <button class="btn secondary" onclick="goto('symptom')">取消</button>
+      <button class="btn" onclick="saveSymptomLog('${l.id}')">儲存</button>
+    </div>
+  `;
+  box.querySelectorAll('input[type=range]').forEach(r => {
+    if (!r.nextElementSibling || !r.nextElementSibling.classList.contains('slider-val')) return;
+  });
+}
+async function saveSymptomLog(id){
+  const log = {
+    id, date: document.getElementById('symDate').value,
+    time: document.getElementById('symTime').value,
+    dorsiStrength: parseInt(document.getElementById('symDorsi').value),
+    numbnessArea: document.getElementById('symNumbArea').value.trim(),
+    numbnessSeverity: parseInt(document.getElementById('symNumbSev').value),
+    plantarFascia: Array.from(document.querySelectorAll('#symFasciaSeg .seg-btn.on')).map(b=>b.dataset.val),
+    note: document.getElementById('symNote').value.trim(),
+  };
+  await dbPut('symptomLogs', log);
+  goto('symptom');
+}
+
+/* ══════════════════════════════════════════════
+   Gait / Function Log
+══════════════════════════════════════════════ */
+async function gaitHTML(){
+  const logs = (await dbGetAll('gaitLogs')).sort((a,b)=>b.date.localeCompare(a.date));
+  const now = new Date();
+  const newId = uid();
+  return `
+    <div class="topbar" style="padding-left:0;padding-right:0;">
+      <h1>功能與步態</h1>
+    </div>
+    <div class="card">
+      <div class="form-group"><label class="form-label">日期</label><input class="form-input" type="date" id="gaitDate" value="${now.toISOString().slice(0,10)}"></div>
+      <div class="form-group"><label class="chk-row"><input type="checkbox" id="gaitAFO"> 今天有使用足踝輔具（AFO／護具）</label></div>
+      <div class="form-group"><label class="form-label">文字描述</label><textarea class="form-input" id="gaitNote" placeholder="今天走路、上下樓、跌倒／絆倒等狀況描述…" style="min-height:100px;"></textarea></div>
+      <button class="btn" style="width:100%;" onclick="saveGaitLog('${newId}')">新增紀錄</button>
+    </div>
+    <div class="card">
+      <div class="card-title"><i class="ti ti-list"></i>歷史紀錄</div>
+      ${logs.length===0 ? emptyHTML('ti-walk','還沒有步態紀錄，於上方新增') : logs.map(l=>`
+        <div class="tl-item">
+          <div class="tl-date">${l.date}${l.usedAFO?'　・　使用 AFO／護具':''}</div>
+          <div class="tl-desc">${escapeHtml(l.note||'')}</div>
+          <div class="tl-edit-row"><button onclick="goto('gaitForm',{id:'${l.id}'})"><i class="ti ti-edit"></i> 編輯</button></div>
+        </div>`).join('')}
+    </div>
+  `;
+}
+function gaitFormHTML(){
+  return `
+    <div class="topbar" style="padding-left:0;padding-right:0;">
+      <button class="back" onclick="goto('gait')"><i class="ti ti-arrow-left"></i></button>
+      <h1>步態紀錄</h1>
+    </div>
+    <div id="gaitFormBody"><div class="empty">載入中…</div></div>
+  `;
+}
+async function renderGaitForm(id){
+  const l = id ? await dbGet('gaitLogs', id) : { id:uid(), date:new Date().toISOString().slice(0,10), usedAFO:false, note:'' };
+  const box = document.getElementById('gaitFormBody');
+  if (!box) return;
+  box.innerHTML = `
+    <div class="form-group"><label class="form-label">日期</label><input class="form-input" type="date" id="gaitDate" value="${l.date}"></div>
+    <div class="form-group"><label class="chk-row"><input type="checkbox" id="gaitAFO" ${l.usedAFO?'checked':''}> 今天有使用足踝輔具（AFO／護具）</label></div>
+    <div class="form-group"><label class="form-label">文字描述</label><textarea class="form-input" id="gaitNote" placeholder="今天走路、上下樓、跌倒／絆倒等狀況描述…" style="min-height:100px;">${escapeHtml(l.note)}</textarea></div>
+    <div class="modal-btns">
+      <button class="btn secondary" onclick="goto('gait')">取消</button>
+      <button class="btn" onclick="saveGaitLog('${l.id}')">儲存</button>
+    </div>
+  `;
+}
+async function saveGaitLog(id){
+  const log = {
+    id, date: document.getElementById('gaitDate').value,
+    usedAFO: document.getElementById('gaitAFO').checked,
+    note: document.getElementById('gaitNote').value.trim(),
+  };
+  await dbPut('gaitLogs', log);
+  goto('gait');
+}
+
+function emptyHTML(icon, text){
+  return `<div class="empty"><i class="ti ${icon}"></i>${text}</div>`;
+}
+function escapeHtml(s){ return (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function escapeAttr(s){ return escapeHtml(s); }
+
+/* ══════════════════════════════════════════════
+   Exercise module (adapted from foot-training-app skill)
+══════════════════════════════════════════════ */
+const WARM = [
+  {id:'warm1', title:'足底放鬆', badge:'1分10秒', dur:69, icon:'ti-ball-football',
+   spk:{s:'開始足底放鬆，將腳踩在按摩球上，準備慢慢滾動',e:'足底放鬆完成'},
+   inst:'腳踩按摩球（或網球／寶特瓶），依序在前足、足弓、腳跟來回滾動，各約 20 秒，力道適中，感覺微酸即可。'},
+  {id:'warm2', title:'小腿後側伸展', badge:'1分10秒', dur:69, icon:'ti-stretching',
+   spk:{s:'面對牆壁，後腳腳跟踩穩地板，膝蓋打直，準備伸展',e:'小腿伸展完成'},
+   inst:'面牆站立，後腳（患側）腳跟踩地：先膝蓋打直維持 15 秒，再膝蓋微彎維持 15 秒，換腳重複，共 2 輪。'},
+  {id:'warm3', title:'腳踝喚醒', badge:'50秒', dur:51, icon:'ti-shoe',
+   spk:{s:'開始腳踝喚醒，坐著或站著，準備腳尖往上抬',e:'腳踝喚醒完成'},
+   inst:'腳尖上抬停 1 秒後放下，重複 15-20 次；接著重心從腳跟慢慢移到前腳掌再移回，重複 10-15 次。'},
+  {id:'warm4', title:'臀部啟動', badge:'1分10秒', dur:69, icon:'ti-walk',
+   spk:{s:'開始臀部啟動，膝蓋微彎，準備站姿側移怪獸走',e:'臀部啟動完成，所有暖身動作結束'},
+   inst:'膝蓋微彎，小步往側邊移動再回來，來回 10-15 步 × 2 組，感受臀部外側出力，骨盆盡量不要搖晃。'},
+];
+const DEFAULTS = [
+  {id:'towel', title:'毛巾伸展', badge:'被動伸展', icon:'ti-stretching-2', sets:3, holdSec:10, restSec:15, reps:null,
+   vc:{s:'開始毛巾伸展，毛巾繞過右腳掌，輕輕往自己方向拉', m:'好，保持拉伸，感受右腳小腿後側緊繃', e:'放鬆，準備下一組'},
+   inst:'坐在床上，左腳彎曲，右腳（患側）向前伸直，毛巾繞過右腳掌，雙手輕拉往身體方向。感受右腳小腿後側與跟腱拉緊。'},
+  {id:'wall', title:'牆面弓步', badge:'踝關節活動', icon:'ti-stairs', sets:3, holdSec:10, restSec:15, reps:null,
+   vc:{s:'雙手扶牆，右腳後退，右腳跟踩穩地板', m:'保持右腳腳跟貼地，加深伸展', e:'好，放鬆，換組'},
+   inst:'雙手扶牆，右腳（患側）後退一步，腳跟貼地，左腳在前彎曲。感受右腳後側至踝關節拉伸。'},
+  {id:'active', title:'坐姿背屈', badge:'主動肌力', icon:'ti-chair', sets:3, holdSec:10, restSec:20, reps:12,
+   vc:{s:'坐好，右腳腳尖盡量往上抬，感受脛前肌出力', m:'維持三秒，控制放下', e:'一組完成，休息二十秒'},
+   inst:'坐姿，左腳平踩地，右腳（患側）腳尖往上抬，維持 3 秒後慢慢放下。12 下 1 組。'},
+  {id:'band', title:'阻力帶背屈', badge:'阻力訓練', icon:'ti-line', sets:3, holdSec:10, restSec:20, reps:12,
+   vc:{s:'彈力帶套在右腳掌前端，抵抗阻力將右腳腳背往上拉', m:'感受右腳脛前肌出力，控制速度', e:'很好，一組完成'},
+   inst:'彈力帶套在右腳（患側）前掌，固定另一端於椅腳。抵抗阻力將右腳腳背往上拉，12 下 1 組。'},
+  {id:'heel', title:'離心提踵', badge:'離心控制', icon:'ti-arrow-big-up', sets:3, holdSec:10, restSec:30, reps:12,
+   vc:{s:'扶椅背站立，雙腳踮到最高，重心略偏右腳', m:'左腳用五秒慢慢放下，感受小腿離心控制', e:'一組完成，休息三十秒'},
+   inst:'扶椅背站立，雙腳踮起，左腳用 5 秒慢慢放下，重心略偏右腳（患側）。12 下 1 組。'},
+];
+let voiceOn = true;
+let mode = 'home'; // sub-mode within exercise tab: 'home'|'warm'|'rehab'
+let wcur = 0, wtmr = null, wSS = null;
+let rcur = 0, tmr = null, ss = null, cS = {}, custom = {}, totS = 0;
+
+function spk(text){
+  if (!voiceOn || !text) return;
+  try{
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = 'zh-TW'; u.rate = 0.9;
+    speechSynthesis.speak(u);
+  }catch(e){}
+}
+function togV(){ voiceOn = !voiceOn; render(); }
+
+function exerciseHomeHTML(){
+  mode = 'home';
+  return `
+    <div class="topbar" style="padding-left:0;padding-right:0;">
+      <h1>復健運動</h1>
+      <button class="action" onclick="togV()"><i class="ti ${voiceOn?'ti-volume':'ti-volume-off'}"></i></button>
+    </div>
+    <div class="mode-card" onclick="startWarmModule()"><i class="ti ti-sun"></i><div style="font-weight:600;font-size:16px;">足部暖身</div><div style="font-size:12px;color:var(--text3);margin-top:4px;">走路前的準備運動，約 4 分鐘</div></div>
+    <div class="mode-card" onclick="startRehabModule()"><i class="ti ti-heart-rate-monitor"></i><div style="font-weight:600;font-size:16px;">垂足背屈復健</div><div style="font-size:12px;color:var(--text3);margin-top:4px;">每日復健運動，5 個動作</div></div>
+    <p style="text-align:center;font-size:11px;color:var(--text3);margin-top:1rem;line-height:1.8;">
+      動作示意為圖示簡化版；正式動作請以您的物理治療師指導為準。
+    </p>
+  `;
+}
+function startWarmModule(){ wcur = 0; goto('exWarm'); }
+function startRehabModule(){ rcur = 0; goto('exRehab'); }
+
+function ringSVG(pct, size){
+  size = size || 150;
+  const r = (size/2) - 10, c = 2*Math.PI*r;
+  const off = c * (1 - pct);
+  return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+    <circle class="ring-bg" cx="${size/2}" cy="${size/2}" r="${r}"/>
+    <circle class="ring-fg" cx="${size/2}" cy="${size/2}" r="${r}" stroke-dasharray="${c}" stroke-dashoffset="${off}"/>
+  </svg>`;
+}
+
+/* ---- Warm-up ---- */
+function warmHTML(){
+  const ex = WARM[wcur];
+  return `
+    <div class="topbar" style="padding-left:0;padding-right:0;">
+      <button class="back" onclick="clearTimers();goto('exercise')"><i class="ti ti-arrow-left"></i></button>
+      <h1>足部暖身 ${wcur+1}/${WARM.length}</h1>
+    </div>
+    <div class="ex-hero">
+      <div class="ring-wrap"><div id="warmRing">${ringSVG(0)}</div><div class="ring-num" id="warmNum">${ex.dur}</div></div>
+      <div class="ex-title">${ex.title}</div>
+      <div class="ex-badge">${ex.badge}</div>
+    </div>
+    <div class="ex-icon-box"><i class="ti ${ex.icon}"></i></div>
+    <p class="ex-inst">${ex.inst}</p>
+    <div class="modal-btns">
+      <button class="btn secondary" onclick="wRst()">重新開始</button>
+      <button class="btn" id="warmStartBtn" onclick="startWarm()">開始計時</button>
+    </div>
+  `;
+}
+function startWarm(){
+  const ex = WARM[wcur];
+  spk(ex.spk.s);
+  const btn = document.getElementById('warmStartBtn');
+  if (btn) btn.textContent = '進行中…';
+  setTimeout(()=>runWarmTimer(ex), 1200);
+}
+function runWarmTimer(ex){
+  let rem = ex.dur;
+  clearInterval(wtmr);
+  wtmr = setInterval(()=>{
+    rem--;
+    const numEl = document.getElementById('warmNum');
+    const ringEl = document.getElementById('warmRing');
+    if (numEl) numEl.textContent = Math.max(rem,0);
+    if (ringEl) ringEl.innerHTML = ringSVG(1 - rem/ex.dur).match(/<svg[\s\S]*<\/svg>/)[0];
+    if (rem <= 0){
+      clearInterval(wtmr);
+      spk(ex.spk.e);
+      wFinish();
+    }
+  },1000);
+}
+function wFinish(){
+  if (wcur < WARM.length - 1){
+    setTimeout(()=>{ wcur++; goto('exWarm'); }, 1200);
+  } else {
+    dbPut('exerciseLogs', { id: uid(), date: new Date().toISOString().slice(0,10), module:'warm', label:'足部暖身（全部）' });
+    goto('exercise');
+  }
+}
+function wRst(){ clearInterval(wtmr); goto('exWarm'); }
+function clearTimers(){ clearInterval(wtmr); clearInterval(tmr); speechSynthesis.cancel(); }
+
+/* ---- Rehab ---- */
+function getVal(id, key){
+  if (custom[id] && custom[id][key] !== undefined) return custom[id][key];
+  if (key === 'holdSec'){
+    try{ const saved = localStorage.getItem('holdSec_'+id); if (saved!==null) return parseInt(saved); }catch(e){}
+  }
+  return DEFAULTS.find(e=>e.id===id)[key];
+}
+function isModified(id){
+  const d = DEFAULTS.find(e=>e.id===id);
+  if (!custom[id]) return false;
+  return (custom[id].sets!==undefined && custom[id].sets!==d.sets) || (custom[id].holdSec!==undefined && custom[id].holdSec!==d.holdSec);
+}
+function updateChip(id, key, delta, min, max){
+  if (!custom[id]) custom[id] = {};
+  const newVal = Math.max(min, Math.min(max, getVal(id,key)+delta));
+  custom[id][key] = newVal;
+  if (key==='holdSec'){ try{ localStorage.setItem('holdSec_'+id, newVal); }catch(e){} }
+  goto('exRehab');
+}
+function rehabHTML(){
+  const ex = DEFAULTS[rcur];
+  const sets = getVal(ex.id,'sets'), holdSec = getVal(ex.id,'holdSec');
+  const done = cS[ex.id] || 0;
+  return `
+    <div class="topbar" style="padding-left:0;padding-right:0;">
+      <button class="back" onclick="clearTimers();goto('exercise')"><i class="ti ti-arrow-left"></i></button>
+      <h1>垂足復健 ${rcur+1}/${DEFAULTS.length}</h1>
+    </div>
+    <div class="ex-hero">
+      <div class="ring-wrap"><div id="rehabRing">${ringSVG(0)}</div><div class="ring-num" id="rehabNum">${holdSec}</div></div>
+      <div class="ex-title">${ex.title}</div>
+      <div class="ex-badge">${ex.badge}</div>
+    </div>
+    <div class="ex-icon-box"><i class="ti ${ex.icon}"></i></div>
+    <p class="ex-inst">${ex.inst}</p>
+    <div class="chip-row">
+      <div class="chip"><div class="l">組數</div><div class="v">${sets}</div><div class="chip-adj"><button onclick="updateChip('${ex.id}','sets',-1,1,6)">－</button><button onclick="updateChip('${ex.id}','sets',1,1,6)">＋</button></div></div>
+      <div class="chip"><div class="l">維持秒數</div><div class="v">${holdSec}s</div><div class="chip-adj"><button onclick="updateChip('${ex.id}','holdSec',-2,4,30)">－</button><button onclick="updateChip('${ex.id}','holdSec',2,4,30)">＋</button></div></div>
+      <div class="chip"><div class="l">已完成</div><div class="v">${done}/${sets}</div></div>
+    </div>
+    <div class="modal-btns">
+      <button class="btn secondary" onclick="cS[ex.id]=0;goto('exRehab')">重設</button>
+      <button class="btn" id="rehabStartBtn" onclick="startEx()">開始這組</button>
+    </div>
+  `;
+}
+function startEx(){
+  const ex = DEFAULTS[rcur];
+  spk(ex.vc.s);
+  setTimeout(()=>runSet(ex.id, ex, (cS[ex.id]||0)+1), 1000);
+}
+function runSet(id, ex, n){
+  const holdSec = getVal(id,'holdSec');
+  let rem = holdSec;
+  clearInterval(tmr);
+  tmr = setInterval(()=>{
+    rem--;
+    const numEl = document.getElementById('rehabNum'); const ringEl = document.getElementById('rehabRing');
+    if (numEl) numEl.textContent = Math.max(rem,0);
+    if (ringEl) ringEl.innerHTML = ringSVG(1-rem/holdSec).match(/<svg[\s\S]*<\/svg>/)[0];
+    if (rem <= 0){
+      clearInterval(tmr);
+      cS[id] = n; totS++;
+      const sets = getVal(id,'sets');
+      if (cS[id] >= sets){ mkDone(); }
+      else { spk(ex.vc.e); runRest(id, ex, n+1, ex.restSec); }
+    }
+  },1000);
+}
+function runRest(id, ex, nxt, rs){
+  let rem = rs;
+  clearInterval(tmr);
+  goto('exRehab');
+  const label = document.getElementById('rehabNum');
+  tmr = setInterval(()=>{
+    rem--;
+    if (label) label.textContent = rem>0? '休息 '+rem : '開始';
+    if (rem <= 0){ clearInterval(tmr); runSet(id, ex, nxt); }
+  },1000);
+}
+function mkDone(){
+  const ex = DEFAULTS[rcur];
+  dbPut('exerciseLogs', { id: uid(), date: new Date().toISOString().slice(0,10), module:'rehab', label: ex.title, sets: cS[ex.id] });
+  if (!isModified(ex.id) && rcur < DEFAULTS.length - 1){
+    let rem = 15;
+    goto('exRehab');
+    const numEl = document.getElementById('rehabNum');
+    tmr = setInterval(()=>{
+      rem--;
+      if (numEl) numEl.textContent = rem>0 ? rem+'s 後下一項' : '';
+      if (rem<=0){ clearInterval(tmr); rcur++; goto('exRehab'); }
+    },1000);
+  } else if (rcur < DEFAULTS.length - 1){
+    goto('exRehab');
+  } else {
+    goto('exercise');
+  }
+}
+
+/* ══════════════════════════════════════════════
+   AI Summary (dual engine: Gemini / OpenAI)
+══════════════════════════════════════════════ */
+const GEMINI_MODEL_CANDIDATES = ['gemini-2.5-flash','gemini-2.0-flash','gemini-1.5-flash','gemini-1.5-flash-8b','gemini-1.5-pro','gemini-1.0-pro','gemini-pro'];
+const OPENAI_MODEL = 'gpt-4o-mini';
+function getActiveAI(){
+  const pref = settings.aiPref || 'auto';
+  if (pref==='gemini' && settings.geminiKey) return 'gemini';
+  if (pref==='openai' && settings.openaiKey) return 'openai';
+  if (settings.geminiKey) return 'gemini';
+  if (settings.openaiKey) return 'openai';
+  return null;
+}
+async function aiHTML(){
+  const ai = getActiveAI();
+  return `
+    <div class="topbar" style="padding-left:0;padding-right:0;"><h1>AI 摘要</h1></div>
+    <div class="ai-box">
+      <div class="ai-disclaimer">
+        ⚠️ AI 只會整理您記錄的資料趨勢、生成回診用摘要，並引用病歷中醫師已寫下的結論；
+        <strong>不會、也不能對您的神經恢復狀況或治療方向做出新的診斷判斷</strong>。是否需要調整治療，請以您的醫師評估為準。
+      </div>
+      ${!ai ? `<p style="font-size:13px;color:var(--text2);">請先到「設定」頁面輸入 Gemini 或 OpenAI API Key。</p>` : `
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
+          <button class="btn" onclick="runTrendSummary()">📈 產生趨勢整理</button>
+          <button class="btn secondary" onclick="runVisitBrief()">📋 產生回診摘要</button>
+          <button class="btn secondary" onclick="runGaitCoaching()">🦶 步態與姿勢衛教建議</button>
+        </div>
+        <div id="aiOutput"></div>
+      `}
+    </div>
+  `;
+}
+async function buildContextText(){
+  const timeline = (await dbGetAll('timeline')).sort((a,b)=>a.date.localeCompare(b.date));
+  const symptomLogs = (await dbGetAll('symptomLogs')).sort((a,b)=>a.date.localeCompare(b.date));
+  const gaitLogs = (await dbGetAll('gaitLogs')).sort((a,b)=>a.date.localeCompare(b.date));
+  const exLogs = (await dbGetAll('exerciseLogs')).sort((a,b)=>a.date.localeCompare(b.date));
+  const caseNotes = (await dbGetAll('caseNotes')).sort((a,b)=>a.date.localeCompare(b.date));
+
+  const tlText = timeline.map(t => `- ${t.date}［${TL_TYPES[t.type]?.label||t.type}］${t.title}${t.hospital?'（'+t.hospital+'）':''}：${t.desc||''}${t.historyDesc? '｜病史描述：'+t.historyDesc : ''}${t.doctorConclusion? '｜醫師結論：'+t.doctorConclusion : ''}`).join('\n');
+  const symText = symptomLogs.slice(-30).map(l => `- ${l.date}${l.time?' '+l.time:''} 背屈肌力${l.dorsiStrength}/5，麻木「${l.numbnessArea||'無'}」嚴重度${l.numbnessSeverity}/10，足底筋膜：${(l.plantarFascia&&l.plantarFascia.length)?l.plantarFascia.map(k=>(FASCIA_ZONES.find(z=>z.k===k)||{}).l||k).join('、'):'無'}${l.note?'，備註：'+l.note:''}`).join('\n');
+  const gaitText = gaitLogs.slice(-30).map(l => `- ${l.date}${l.usedAFO?'（有使用AFO／護具）':''}：${l.note||''}`).join('\n');
+  const exText = `近期復健運動完成次數：${exLogs.length} 次`;
+  const csText = caseNotes.map(n => `- ${n.date}：${n.text}`).join('\n');
+
+  return `【病例簡述／病史背景】\n${csText||'（無資料）'}\n\n【病歷時間軸】\n${tlText||'（無資料）'}\n\n【症狀日誌】\n${symText||'（無資料）'}\n\n【步態與功能】\n${gaitText||'（無資料）'}\n\n【運動紀錄】\n${exText}`;
+}
+async function callGeminiAuto(prompt){
+  const key = settings.geminiKey;
+  const ordered = settings.geminiWorkingModel
+    ? [settings.geminiWorkingModel, ...GEMINI_MODEL_CANDIDATES.filter(m=>m!==settings.geminiWorkingModel)]
+    : GEMINI_MODEL_CANDIDATES;
+  let lastErr = null;
+  for (const model of ordered){
+    const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`,{
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ contents:[{parts:[{text:prompt}]}] })
+    });
+    const data = await resp.json().catch(()=>({}));
+    if (resp.ok){
+      if (settings.geminiWorkingModel !== model) saveSetting('geminiWorkingModel', model);
+      return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    }
+    const msg = data.error?.message || resp.statusText;
+    lastErr = new Error(msg);
+    const isModelIssue = resp.status === 404 || /not found|not supported|does not exist/i.test(msg);
+    if (!isModelIssue) throw lastErr; // 金鑰錯誤／額度用盡等其他問題，直接中止不用再試其他版本
+  }
+  throw lastErr || new Error('所有 Gemini 模型版本皆嘗試失敗');
+}
+async function callAI(prompt){
+  const ai = getActiveAI();
+  if (ai === 'gemini'){
+    return await callGeminiAuto(prompt);
+  } else {
+    const resp = await fetch('https://api.openai.com/v1/chat/completions',{
+      method:'POST', headers:{'Content-Type':'application/json','Authorization':`Bearer ${settings.openaiKey}`},
+      body: JSON.stringify({ model: OPENAI_MODEL, messages:[{role:'user',content:prompt}], max_tokens:900, temperature:0.4 })
+    });
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.error?.message || resp.statusText);
+    return data.choices?.[0]?.message?.content || '';
+  }
+}
+const AI_SAFETY_INSTRUCTION = `你是一位協助整理個人復健紀錄的助理，服務對象正在恢復右側垂足（腓總神經損傷術後＋肌腱轉位），同時有腰椎椎間盤突出手術病史。
+【重要規則，務必遵守】
+- 你只能整理、比對、摘要使用者提供的紀錄與病歷中醫師已寫下的結論，不能自己對神經恢復程度、腰椎狀況、或治療方向做出新的診斷或建議。
+- 若使用者的紀錄顯示某些變化「可能」值得跟醫師討論，只能用「建議與您的醫師討論」的措辭，不能給出像是「這代表你的神經沒有恢復」這類確定性判斷。
+- 不要建議是否需要再次手術、換藥、或停止復健運動，這些屬於醫療決策。
+- 語氣專業、清楚、有條理，繁體中文。`;
+async function runTrendSummary(){
+  const out = document.getElementById('aiOutput');
+  out.innerHTML = '<p class="ai-thinking">正在整理趨勢，請稍候…</p>';
+  try{
+    const ctx = await buildContextText();
+    const prompt = `${AI_SAFETY_INSTRUCTION}\n\n以下是使用者的完整紀錄：\n${ctx}\n\n請整理出：1) 症狀與功能隨時間的變化趨勢（用條列） 2) 值得留意、建議跟醫師討論的重點 3) 復健運動的執行狀況觀察。約 350-450 字，繁體中文。`;
+    const text = await callAI(prompt);
+    out.innerHTML = `<p class="ai-response">${escapeHtml(text)}</p>`;
+  }catch(e){
+    out.innerHTML = `<p style="color:var(--red);font-size:13px;">發生錯誤：${escapeHtml(e.message)}</p>`;
+  }
+}
+async function runVisitBrief(){
+  const out = document.getElementById('aiOutput');
+  out.innerHTML = '<p class="ai-thinking">正在生成回診摘要，請稍候…</p>';
+  try{
+    const ctx = await buildContextText();
+    const prompt = `${AI_SAFETY_INSTRUCTION}\n\n以下是使用者的完整紀錄：\n${ctx}\n\n請產生一份「回診用摘要」，格式為條列重點，方便使用者直接帶去給醫師看，內容包含：上次紀錄以來的症狀變化、疼痛與麻木趨勢、步態與跌倒狀況、復健運動配合度、以及使用者可能想主動詢問醫師的問題清單（3-5 個）。繁體中文，條列清晰。`;
+    const text = await callAI(prompt);
+    out.innerHTML = `<p class="ai-response">${escapeHtml(text)}</p>`;
+  }catch(e){
+    out.innerHTML = `<p style="color:var(--red);font-size:13px;">發生錯誤：${escapeHtml(e.message)}</p>`;
+  }
+}
+
+async function runGaitCoaching(){
+  const out = document.getElementById('aiOutput');
+  out.innerHTML = '<p class="ai-thinking">正在整理步態與姿勢衛教建議，請稍候…</p>';
+  try{
+    const ctx = await buildContextText();
+    const prompt = `${AI_SAFETY_INSTRUCTION}\n\n以下是使用者的完整紀錄：\n${ctx}\n\n請提供「步態與復健姿勢」方面的一般性衛教建議（這是通用衛教資訊，不是根據觸診或評估的個人化醫療處方）：\n1) 根據紀錄中的步態穩定度、跌倒次數、AFO 使用、以及復健運動完成狀況，指出 2-3 個常見的、通用的步態訓練原則或動作提示（例如高抬腿走法、腳跟先著地的提示語、重心轉移練習、常見代償動作提醒等物理治療衛教常見內容）。\n2) 提醒使用者在執行目前復健運動時，容易被忽略的動作細節。\n3) 明確列出：哪些狀況應該直接請教物理治療師或醫師調整訓練或輔具，而不是自行嘗試改變。\n請在開頭清楚說明這些只是一般性衛教原則，無法取代物理治療師實際觸診評估後給的個人化指導，且不構成醫療建議。約 350-450 字，繁體中文，條列清晰。`;
+    const text = await callAI(prompt);
+    out.innerHTML = `<p class="ai-response">${escapeHtml(text)}</p>`;
+  }catch(e){
+    out.innerHTML = `<p style="color:var(--red);font-size:13px;">發生錯誤：${escapeHtml(e.message)}</p>`;
+  }
+}
+
+/* ══════════════════════════════════════════════
+   Settings
+══════════════════════════════════════════════ */
+async function settingsHTML(){
+  const gk = settings.geminiKey, ok = settings.openaiKey;
+  return `
+    <div class="topbar" style="padding-left:0;padding-right:0;"><h1>設定</h1></div>
+    <div class="card">
+      <div class="card-title"><i class="ti ti-key"></i>AI API Key</div>
+      <div class="api-tab-row">
+        <button class="api-tab ${(settings._tab||'gemini')==='gemini'?'active':''}" onclick="settings._tab='gemini';render()">Gemini${gk?'<span class=\"key-status ok\">已設定</span>':''}</button>
+        <button class="api-tab ${settings._tab==='openai'?'active':''}" onclick="settings._tab='openai';render()">OpenAI${ok?'<span class=\"key-status ok\">已設定</span>':''}</button>
+      </div>
+      ${(settings._tab||'gemini')==='gemini' ? `
+        <input class="form-input" type="password" id="geminiKeyInput" placeholder="AIza..." value="${escapeAttr(gk||'')}">
+        <div class="modal-btns"><button class="btn" onclick="saveKeyField('geminiKey','geminiKeyInput')">儲存</button><button class="btn secondary" onclick="clearKeyField('geminiKey')">清除</button></div>
+        <div style="font-size:11px;color:var(--text3);margin-top:6px;">會自動偵測可用的 Gemini 版本（1.0／1.5／2.0／2.5 flash 皆可），不需手動指定。${settings.geminiWorkingModel ? `目前使用：${escapeHtml(settings.geminiWorkingModel)}` : ''}</div>
+      ` : `
+        <input class="form-input" type="password" id="openaiKeyInput" placeholder="sk-..." value="${escapeAttr(ok||'')}">
+        <div class="modal-btns"><button class="btn" onclick="saveKeyField('openaiKey','openaiKeyInput')">儲存</button><button class="btn secondary" onclick="clearKeyField('openaiKey')">清除</button></div>
+      `}
+    </div>
+    <div class="card">
+      <div class="card-title"><i class="ti ti-lock"></i>安全</div>
+      <button class="btn secondary" style="width:100%;margin-bottom:8px;" onclick="lockApp()"><i class="ti ti-lock"></i> 立即鎖定</button>
+      <button class="btn secondary" style="width:100%;" onclick="promptChangePassword()">變更密碼</button>
+    </div>
+    <div class="card">
+      <div class="card-title"><i class="ti ti-database-export"></i>資料備份</div>
+      <p style="font-size:12px;color:var(--text3);margin-bottom:10px;">資料存在您瀏覽器的本機資料庫，清除瀏覽器資料會遺失，請定期匯出備份。</p>
+      <div class="modal-btns">
+        <button class="btn secondary" onclick="exportData()"><i class="ti ti-download"></i> 匯出備份</button>
+        <button class="btn secondary" onclick="document.getElementById('importFile').click()"><i class="ti ti-upload"></i> 匯入備份</button>
+      </div>
+      <input type="file" id="importFile" accept="application/json" class="hidden" onchange="importData(event)">
+    </div>
+    <div class="card">
+      <div class="card-title"><i class="ti ti-cloud"></i>雲端同步（Firebase，選用）</div>
+      <p style="font-size:12px;color:var(--text3);margin-bottom:10px;line-height:1.8;">
+        設定後，病例簡述、病歷、報告、症狀與運動紀錄會另外備份一份到您自己的 Firebase 雲端專案，可跨裝置存取。API Key 與密碼永遠只留在本機、不會上傳。<br>
+        步驟：前往 <strong>firebase.google.com</strong> → 建立免費專案 → 新增「Web App」→ 啟用 <strong>Firestore Database</strong>、<strong>Storage</strong>、<strong>Authentication（Email/Password）</strong>→ 把畫面上的設定物件整段複製貼在下方。
+      </p>
+      <div class="form-group">
+        <label class="form-label">貼上 Firebase 設定物件（firebaseConfig）</label>
+        <textarea class="form-input" id="fbConfigInput" style="min-height:90px;" placeholder='{ apiKey: "...", authDomain: "...", projectId: "...", storageBucket: "...", messagingSenderId: "...", appId: "..." }'>${settings.fbConfig ? JSON.stringify(settings.fbConfig, null, 2) : ''}</textarea>
+      </div>
+      <button class="btn secondary" style="width:100%;margin-bottom:10px;" onclick="saveFirebaseConfigField()">儲存設定</button>
+      ${!settings.fbConfig ? '' : `
+        <div style="font-size:12px;color:var(--text2);margin-bottom:8px;">${fbUser ? '已登入：'+escapeHtml(fbUser.email) : '尚未登入雲端帳號'}</div>
+        ${!fbUser ? `
+          <div class="form-group"><input class="form-input" id="fbEmail" placeholder="Email" style="margin-bottom:8px;"><input class="form-input" type="password" id="fbPw" placeholder="密碼（至少 6 碼）"></div>
+          <div class="modal-btns"><button class="btn secondary" onclick="fbDoSignUp()">註冊新帳號</button><button class="btn" onclick="fbDoSignIn()">登入</button></div>
+        ` : `
+          <div class="modal-btns">
+            <button class="btn secondary" onclick="doCloudPushAllLocal()"><i class="ti ti-cloud-upload"></i> 上傳本機資料</button>
+            <button class="btn secondary" onclick="doCloudPullAll()"><i class="ti ti-cloud-download"></i> 下載雲端資料</button>
+          </div>
+          <button class="btn secondary" style="width:100%;margin-top:8px;" onclick="fbDoSignOut()">登出雲端帳號</button>
+        `}
+      `}
+    </div>
+  `;
+}
+async function saveKeyField(settingKey, inputId){
+  const v = document.getElementById(inputId).value.trim();
+  await saveSetting(settingKey, v);
+  render();
+}
+async function clearKeyField(settingKey){
+  await saveSetting(settingKey, '');
+  render();
+}
+async function saveFirebaseConfigField(){
+  const raw = document.getElementById('fbConfigInput').value.trim();
+  if (!raw){ await saveSetting('fbConfig', null); fbApp=null; fbAuth=null; fbDb=null; fbStorage=null; fbUser=null; render(); return; }
+  try{
+    const cfg = Function('"use strict"; return (' + raw + ')')();
+    if (!cfg || !cfg.apiKey || !cfg.projectId) throw new Error('缺少必要欄位（apiKey / projectId）');
+    await saveSetting('fbConfig', cfg);
+    fbApp = null; fbAuth = null; fbDb = null; fbStorage = null; fbUser = null;
+    initFirebase();
+    alert('Firebase 設定已儲存');
+    render();
+  }catch(e){
+    alert('設定物件格式不正確，請確認貼上的內容：' + e.message);
+  }
+}
+async function fbDoSignUp(){
+  const email = document.getElementById('fbEmail').value.trim();
+  const pw = document.getElementById('fbPw').value;
+  if (!email || pw.length < 6){ alert('請輸入 Email 及至少 6 碼密碼'); return; }
+  try{ await fbSignUp(email, pw); render(); }catch(e){ alert('註冊失敗：' + e.message); }
+}
+async function fbDoSignIn(){
+  const email = document.getElementById('fbEmail').value.trim();
+  const pw = document.getElementById('fbPw').value;
+  if (!email || !pw){ alert('請輸入 Email 及密碼'); return; }
+  try{ await fbSignIn(email, pw); render(); }catch(e){ alert('登入失敗：' + e.message); }
+}
+async function fbDoSignOut(){ await fbSignOut(); render(); }
+async function doCloudPushAllLocal(){
+  if (!confirm('確定要把本機所有病例簡述／病歷／症狀／運動紀錄上傳到雲端嗎？')) return;
+  try{ const n = await cloudPushAllLocal(); alert(`已上傳 ${n} 筆資料到雲端`); }
+  catch(e){ alert('上傳失敗：' + e.message); }
+}
+async function doCloudPullAll(){
+  if (!confirm('確定要把雲端資料下載合併到這台裝置嗎？（相同 ID 會被覆蓋）')) return;
+  try{ const n = await cloudPullAll(); alert(`已從雲端下載 ${n} 筆資料`); goto('home'); }
+  catch(e){ alert('下載失敗：' + e.message); }
+}
+async function promptChangePassword(){
+  const cur = prompt('請輸入目前密碼：');
+  if (cur === null) return;
+  const hash = await sha256(cur);
+  if (hash !== settings.pwHash){ alert('目前密碼不正確'); return; }
+  const np1 = prompt('請輸入新密碼（至少 4 碼）：');
+  if (!np1 || np1.length < 4){ alert('密碼至少 4 碼'); return; }
+  const np2 = prompt('請再輸入一次新密碼：');
+  if (np1 !== np2){ alert('兩次輸入不一致'); return; }
+  await saveSetting('pwHash', await sha256(np1));
+  alert('密碼已更新');
+}
+async function exportData(){
+  const data = {};
+  for (const s of STORES) data[s] = await dbGetAll(s);
+  const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `recovery-backup-${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+}
+async function importData(e){
+  const file = e.target.files[0];
+  if (!file) return;
+  if (!confirm('匯入將會與現有資料合併（相同 ID 會被覆蓋），確定要繼續嗎？')) return;
+  const text = await file.text();
+  try{
+    const data = JSON.parse(text);
+    for (const s of STORES){
+      if (Array.isArray(data[s])){
+        for (const row of data[s]) await dbPut(s, row);
+      }
+    }
+    await loadSettings();
+    alert('匯入完成');
+    goto('home');
+  }catch(err){
+    alert('匯入失敗：檔案格式錯誤');
+  }
+}
+
+/* Hook form renders after navigation (since goto() sets innerHTML synchronously before async form load) */
+const _origGoto = goto;
+goto = function(v, params){
+  _origGoto(v, params);
+  setTimeout(()=>{
+    if (v === 'timelineForm') renderTimelineForm(params && params.id);
+    if (v === 'symptomForm') renderSymptomForm(params && params.id);
+    if (v === 'gaitForm') renderGaitForm(params && params.id);
+  }, 0);
+};
+</script>
+</body>
+</html>
